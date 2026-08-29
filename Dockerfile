@@ -51,11 +51,16 @@ ARG NUM_JOBS=4
 RUN git clone --depth 1 https://github.com/kaldi-asr/kaldi.git /opt/kaldi
 
 # Build Kaldi tools and core source with OpenBLAS
-# 1. Compile tools (OpenFST, sctk, sph2pipe) and OpenBLAS
-# 2. Add symlink compatibility for Kaldi's configure path lookup
-# 3. Configure and compile Kaldi C++ shared libraries and binaries
-# 4. Clean intermediate object files to keep image size compact
+# 1. Pre-download dependencies directly with curl to bypass outdated/broken HTTP & 404 OpenSLR URLs in Kaldi Makefile
+# 2. Compile tools (OpenFST, sctk, sph2pipe) and OpenBLAS
+# 3. Add symlink compatibility for Kaldi's configure path lookup
+# 4. Configure and compile Kaldi C++ shared libraries and binaries
+# 5. Clean intermediate object files to keep image size compact
 RUN cd /opt/kaldi/tools && \
+    curl -fsSL -A "Mozilla/5.0" -o openfst-1.8.4.tar.gz https://www.openfst.org/twiki/pub/FST/FstDownload/openfst-1.8.4.tar.gz && \
+    curl -fsSL -o sctk-20159b5.tar.gz https://github.com/usnistgov/SCTK/archive/20159b5.tar.gz && \
+    curl -fsSL -o sph2pipe-2.5.tar.gz https://github.com/burrmill/sph2pipe/archive/2.5.tar.gz && \
+    curl -fsSL -o cub-1.8.0.tar.gz https://github.com/NVlabs/cub/archive/1.8.0.tar.gz && \
     ./extras/install_openblas.sh && \
     make -j ${TOOLS_JOBS} && \
     mkdir -p /opt/kaldi/tools/extras && \

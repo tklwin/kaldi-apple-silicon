@@ -1,5 +1,6 @@
 # Kaldi ASR for Apple Silicon (M1 / M2 / M3 / M4)
 
+[![Build and Publish](https://github.com/tklwin/kaldi-apple-silicon/actions/workflows/docker-build.yml/badge.svg)](https://github.com/tklwin/kaldi-apple-silicon/actions/workflows/docker-build.yml)
 [![Docker Image](https://img.shields.io/badge/docker%20hub-tklwin%2Fkaldi--apple--silicon-blue.svg?logo=docker)](https://hub.docker.com/r/tklwin/kaldi-apple-silicon)
 [![Platform](https://img.shields.io/badge/platform-linux%2Farm64-brightgreen.svg)](https://hub.docker.com/r/tklwin/kaldi-apple-silicon)
 [![Base](https://img.shields.io/badge/base-Debian%2012%20(Bookworm)-red.svg)](https://hub.docker.com/_/debian)
