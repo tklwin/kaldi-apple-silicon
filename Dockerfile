@@ -51,18 +51,24 @@ ARG NUM_JOBS=4
 RUN git clone --depth 1 https://github.com/kaldi-asr/kaldi.git /opt/kaldi
 
 # Build Kaldi tools and core source with OpenBLAS
-# 1. Compile tools (OpenFST, sctk, sph2pipe) and OpenBLAS
-# 2. Add symlink compatibility for Kaldi's configure path lookup
-# 3. Configure and compile Kaldi C++ shared libraries and binaries
-# 4. Clean intermediate object files to keep image size compact
-RUN cd /opt/kaldi/tools && \
+# 1. Ensure Python symlink and pre-download dependencies sequentially to prevent network timeout
+# 2. Compile tools (OpenFST, sctk, sph2pipe) and OpenBLAS
+# 3. Add symlink compatibility for Kaldi's configure path lookup
+# 4. Configure and compile Kaldi C++ shared libraries and binaries
+# 5. Clean intermediate object files to keep image size compact
+RUN mkdir -p /opt/kaldi/tools/python && \
+    touch /opt/kaldi/tools/python/.use_default_python && \
+    cd /opt/kaldi/tools && \
     ./extras/install_openblas.sh && \
+    make WGET="wget -T 60 -t 5" -j 1 openfst && \
+    make WGET="wget -T 60 -t 5" -j 1 sctk_made && \
+    make WGET="wget -T 60 -t 5" -j 1 sph2pipe && \
     make -j ${TOOLS_JOBS} && \
     mkdir -p /opt/kaldi/tools/extras && \
     ln -sf /opt/kaldi/tools/OpenBLAS /opt/kaldi/tools/extras/OpenBLAS && \
     cd /opt/kaldi/src && \
     ./configure --shared --mathlib=OPENBLAS --openblas-root=/opt/kaldi/tools/OpenBLAS/install && \
-    make depend -j ${TOOLS_JOBS} && \
+    make depend -j 1 && \
     make -j ${NUM_JOBS} && \
     find /opt/kaldi/src -type f -name "*.o" -delete && \
     rm -rf /opt/kaldi/.git
