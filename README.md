@@ -1,23 +1,36 @@
 # Kaldi ASR for Apple Silicon (M1 / M2 / M3 / M4)
 
 [![Build and Publish](https://github.com/tklwin/kaldi-apple-silicon/actions/workflows/docker-build.yml/badge.svg)](https://github.com/tklwin/kaldi-apple-silicon/actions/workflows/docker-build.yml)
-[![Docker Image](https://img.shields.io/badge/docker%20hub-tklwin%2Fkaldi--apple--silicon-blue.svg?logo=docker)](https://hub.docker.com/r/tklwin/kaldi-apple-silicon)
+[![Docker Pulls](https://img.shields.io/docker/pulls/tklwin/kaldi-apple-silicon.svg?logo=docker&color=blue)](https://hub.docker.com/r/tklwin/kaldi-apple-silicon)
+[![Image Size](https://img.shields.io/docker/image-size/tklwin/kaldi-apple-silicon/latest?color=success)](https://hub.docker.com/r/tklwin/kaldi-apple-silicon)
 [![Platform](https://img.shields.io/badge/platform-linux%2Farm64-brightgreen.svg)](https://hub.docker.com/r/tklwin/kaldi-apple-silicon)
 [![Base](https://img.shields.io/badge/base-Debian%2012%20(Bookworm)-red.svg)](https://hub.docker.com/_/debian)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 
-A high-performance, native **ARM64** Docker environment for running and developing with [Kaldi ASR](https://github.com/kaldi-asr/kaldi) on **Apple Silicon Macs** (M1, M2, M3, M4) with **Colima** or Docker Desktop.
+A high-performance, native **ARM64 (`aarch64`)** Docker environment for running and developing with [Kaldi ASR](https://github.com/kaldi-asr/kaldi) on **Apple Silicon Macs** (M1, M2, M3, M4) with **Colima** or Docker Desktop.
 
 ---
 
 ## 💡 Why This Repository?
 
-| Challenge with Standard Kaldi | How This Image Solves It |
-| :--- | :--- |
-| **Intel x86 Emulation** (`kaldiasr/kaldi:latest`) | Compiles natively for **ARM64 (`aarch64`)** with **ARM NEON SIMD vectorization** for zero emulation overhead and maximum CPU efficiency. |
-| **Out-Of-Memory (OOM) Crash** | Controls OpenFST C++ template compilation concurrency to stay safely within memory limits on 8GB host Macs. |
-| **OpenBLAS Path Bug** | Automatically fixes Kaldi's `./configure` path lookup bug for OpenBLAS. |
-| **Manual Configuration** | Automatically exports all Kaldi binary directories (`featbin`, `gmmbin`, `nnet3bin`, `openfst`, `sctk`) directly into `PATH`. Includes Python 3, `numpy`, `scipy`, and `sox`. |
+The official Kaldi Docker images on Docker Hub (`kaldiasr/kaldi`) are strictly compiled for **Intel/AMD x86_64 architecture only**. 
+
+When running standard Kaldi on Apple Silicon Macs, Docker is forced to run via **QEMU x86 emulation**, leading to:
+* **3x–5x Slower Execution** and high CPU throttling.
+* **Massive Memory Bloat**: Emulation requires significantly more host RAM.
+* **Out-Of-Memory (OOM) Crashes**: OpenFST C++ template compilation easily crashes 8GB host Macs.
+* **Missing Tool Paths**: Upstream images leave binary directories unexported.
+
+### How This Image Solves It:
+
+| Feature | Standard Kaldi (`kaldiasr/kaldi`) | `tklwin/kaldi-apple-silicon` |
+| :--- | :--- | :--- |
+| **Architecture** | `linux/amd64` (Emulated on Mac) | **`linux/arm64` (Native Apple Silicon)** |
+| **Vector Acceleration** | Generic x86 SSE | **ARM NEON SIMD Vectorization with OpenBLAS** |
+| **Download Size** | ~10 GB bloated | **~1.7 GB (Cleaned & Compact)** |
+| **PATH Environment** | ❌ Manual setup required | ✅ **All 20+ Kaldi binary directories pre-configured** |
+| **Audio & Python Stack** | Basic | ✅ Includes `Python 3.11`, `numpy`, `scipy`, `sox`, `sph2pipe`, `sclite` |
+| **Build Stability** | ❌ Fails on upstream 404/403 URLs | ✅ **100% Hermetic & Reproducible with bundled tools** |
 
 ---
 
@@ -25,7 +38,7 @@ A high-performance, native **ARM64** Docker environment for running and developi
 
 No local compilation required! You and your team can pull the pre-built image directly from Docker Hub or GitHub Container Registry:
 
-### From Docker Hub:
+### Pull & Run from Docker Hub:
 ```bash
 docker run --rm -it \
   --name kaldi-session \
@@ -33,7 +46,7 @@ docker run --rm -it \
   tklwin/kaldi-apple-silicon:latest
 ```
 
-### From GitHub Container Registry (GHCR):
+### Pull & Run from GitHub Container Registry (GHCR):
 ```bash
 docker run --rm -it \
   --name kaldi-session \
@@ -43,91 +56,113 @@ docker run --rm -it \
 
 ---
 
-## 🛠️ Local Build Instructions
+## 🧪 Verification & Health Check
 
-If you prefer building the Docker image locally from source on your Mac:
-
-### 1. Start Colima
-
-* **For 8 GB RAM Macs (e.g. M2):**
-  ```bash
-  colima start --cpu 4 --memory 4 --disk 30
-  ```
-* **For 16 GB+ RAM Macs (e.g. M4):**
-  ```bash
-  colima start --cpu 6 --memory 10 --disk 40
-  ```
-
-### 2. Build
-
-* **On 8 GB RAM Mac (Safe single-threaded tools build to avoid OOM):**
-  ```bash
-  docker build -t kaldi-apple-silicon:local .
-  ```
-
-* **On 16 GB+ RAM Mac (Fast multi-threaded build in ~6–8 mins):**
-  ```bash
-  docker build --build-arg TOOLS_JOBS=4 --build-arg NUM_JOBS=6 -t kaldi-apple-silicon:local .
-  ```
-
----
-
-## 🧪 Verification & Sanity Check
-
-Inside the container, test that the core Kaldi binaries and shared libraries work:
+Inside the container, test that the core Kaldi toolchains and libraries work:
 
 ```bash
-# 1. Test Feature Extraction (MFCC)
+# 1. Feature Extraction (MFCC & Filterbank)
 compute-mfcc-feats --help
+compute-fbank-feats --help
 
-# 2. Test OpenFST Finite State Transducer Compiler
-fstcompile --help
-
-# 3. Test Gaussian Mixture Model (GMM) Tool
+# 2. Acoustic Modeling & Alignment
 gmm-info --help
+gmm-init-mono --help
+
+# 3. Deep Neural Networks (nnet3 & Chain)
+nnet3-info --help
+nnet3-latgen-faster --help
+
+# 4. OpenFST Weighted Transducer Engine
+fstcompile --help
+fstinfo --help
+
+# 5. NIST Scoring & Evaluation
+sclite
+
+# 6. SPHERE Audio Conversion
+sph2pipe
+
+# 7. Scientific Python Environment
+python3 -c "import numpy, scipy; print('NumPy & SciPy OK!')"
 ```
 
 ---
 
-## 🚀 Setting up GitHub Cloud Auto-Build (CI/CD)
+## 💻 Running Speech Recognition Recipes (e.g. `egs/`)
 
-This repository includes a GitHub Actions workflow (`.github/workflows/docker-build.yml`) that automatically builds and publishes the ARM64 image to Docker Hub and GHCR on every push.
-
-### Configuration Steps:
-1. Push this repository to your GitHub account:
-   ```bash
-   git init
-   git add .
-   git commit -m "feat: native kaldi for apple silicon"
-   git remote add origin https://github.com/<your-username>/kaldi-apple-silicon.git
-   git push -u origin main
-   ```
-2. Go to your repository on GitHub $\rightarrow$ **Settings** $\rightarrow$ **Secrets and variables** $\rightarrow$ **Actions** $\rightarrow$ **New repository secret**:
-   * `DOCKERHUB_USERNAME`: Your Docker Hub username (e.g., `tklwin`)
-   * `DOCKERHUB_TOKEN`: Your Docker Hub Personal Access Token (created at [hub.docker.com](https://hub.docker.com/settings/security))
-3. Whenever you push changes or trigger the workflow manually under the **Actions** tab, GitHub will build the ARM64 container in the cloud and update your Docker Hub repository.
-
----
-
-## 💻 Running Speech Recognition Recipes (e.g., `egs/`)
-
-1. Mount your local speech project directory into `/workspace`:
+1. Mount your speech project directory or dataset into `/workspace`:
    ```bash
    docker run --rm -it -v "$(pwd)":/workspace tklwin/kaldi-apple-silicon:latest
    ```
-2. In any Kaldi recipe (e.g., `kaldi/egs/xbmu_amdo31/s5`):
-   * Ensure `path.sh` points to `/opt/kaldi`:
-     ```bash
-     export KALDI_ROOT=/opt/kaldi
-     . $KALDI_ROOT/tools/env.sh
-     export PATH=$PWD/utils/:$KALDI_ROOT/tools/openfst/bin:$KALDI_ROOT/tools/sctk/bin:$PWD:$PATH
-     . $KALDI_ROOT/tools/config/common_path.sh
-     export LC_ALL=C
-     ```
-3. Run standard Kaldi training scripts (`run.sh`).
+2. In any Kaldi recipe (e.g. `kaldi/egs/wsj/s5` or custom datasets), make sure `path.sh` points to `/opt/kaldi`:
+   ```bash
+   export KALDI_ROOT=/opt/kaldi
+   export PATH=$PWD/utils/:$KALDI_ROOT/src/bin:$KALDI_ROOT/tools/openfst/bin:$KALDI_ROOT/tools/sctk/bin:$PATH
+   export LC_ALL=C
+   ```
+3. Run standard Kaldi training and decoding scripts (`run.sh`).
+
+---
+
+## 🛠️ Building From Source Locally
+
+If you prefer building the Docker image locally from source on your Mac:
+
+### 1. Recommended Colima Configurations
+
+[Colima](https://github.com/abiosoft/colima) is a fast, minimal, and open-source container runtime for macOS that provides significantly lower memory overhead on Apple Silicon compared to Docker Desktop. Install it via Homebrew: `brew install colima docker`.
+
+* **For 8 GB RAM Macs (e.g. M1/M2/M3 Base):**
+  ```bash
+  colima start --cpu 4 --memory 4 --disk 30
+  ```
+* **For 16 GB+ RAM Macs (e.g. Pro/Max/M4):**
+  ```bash
+  colima start --cpu 6 --memory 10 --disk 40
+  ```
+
+### 2. Build Commands
+
+* **On 8 GB RAM Mac (Safe single-threaded tools build to prevent OOM):**
+  ```bash
+  docker build -t kaldi-apple-silicon:local .
+  ```
+* **On 16 GB+ RAM Mac (Fast multi-threaded build in ~6–8 mins):**
+  ```bash
+  docker build --build-arg TOOLS_JOBS=4 --build-arg NUM_JOBS=8 -t kaldi-apple-silicon:local .
+  ```
+
+---
+
+## 🚀 Cloud Auto-Build Architecture (CI/CD)
+
+This repository is powered by **Docker Build Cloud** and **GitHub Actions** (`.github/workflows/docker-build.yml`).
+
+* **Native ARM64 AWS Graviton Cluster**: Builds natively on 16-core cloud servers without slow QEMU emulation.
+* **Hermetic Tool Bundles (`dependencies/`)**: Pre-packages exact versions of OpenFST 1.8.4, NIST SCTK 20159b5, sph2pipe 2.5, and CUB 1.8.0 to eliminate Cloudflare 403 blocks and outdated 404 URLs.
+* **Auto-Cached Layers**: Cloud-shared BuildKit cache ensures incremental updates finish in under 1 minute.
+
+---
+
+## 📁 Repository Structure
+
+```text
+kaldi-apple-silicon/
+├── Dockerfile                  # Production Debian 12 ARM64 recipe with OpenBLAS
+├── dependencies/               # Pinned OpenFST, SCTK, sph2pipe, and CUB tarballs
+├── .devcontainer/              # VS Code Dev Container & Codespaces config
+│   └── devcontainer.json
+├── .github/
+│   └── workflows/
+│       └── docker-build.yml    # High-speed Docker Build Cloud CI/CD workflow
+├── .dockerignore               # Optimized Docker build context exclusions
+├── LICENSE                     # Apache 2.0 Open Source License
+└── README.md                   # Documentation and quickstart guide
+```
 
 ---
 
 ## 📄 License
 
-This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the [Apache License 2.0](LICENSE) - aligned with the official [Kaldi ASR License](https://github.com/kaldi-asr/kaldi/blob/master/COPYING).

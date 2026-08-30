@@ -70,9 +70,9 @@ RUN cd /opt/kaldi/tools && \
     find /opt/kaldi/src -type f -name "*.o" -delete && \
     rm -rf /opt/kaldi/.git
 
-# Configure Environment Variables & PATH for all Kaldi binaries
+# Configure Comprehensive Environment Variables & PATH for all Kaldi binary toolchains
 ENV KALDI_ROOT=/opt/kaldi
-ENV PATH="${KALDI_ROOT}/src/bin:${KALDI_ROOT}/src/featbin:${KALDI_ROOT}/src/gmmbin:${KALDI_ROOT}/src/nnet3bin:${KALDI_ROOT}/src/lmbin:${KALDI_ROOT}/src/ivectorbin:${KALDI_ROOT}/src/kwsbin:${KALDI_ROOT}/src/online2bin:${KALDI_ROOT}/tools/openfst/bin:${KALDI_ROOT}/tools/sctk/bin:${PATH}"
+ENV PATH="${KALDI_ROOT}/src/bin:${KALDI_ROOT}/src/featbin:${KALDI_ROOT}/src/gmmbin:${KALDI_ROOT}/src/fgmmbin:${KALDI_ROOT}/src/sgmm2bin:${KALDI_ROOT}/src/latbin:${KALDI_ROOT}/src/nnetbin:${KALDI_ROOT}/src/nnet2bin:${KALDI_ROOT}/src/nnet3bin:${KALDI_ROOT}/src/chainbin:${KALDI_ROOT}/src/rnnlmbin:${KALDI_ROOT}/src/lmbin:${KALDI_ROOT}/src/fstbin:${KALDI_ROOT}/src/ivectorbin:${KALDI_ROOT}/src/kwsbin:${KALDI_ROOT}/src/onlinebin:${KALDI_ROOT}/src/online2bin:${KALDI_ROOT}/tools/openfst/bin:${KALDI_ROOT}/tools/sctk/bin:${KALDI_ROOT}/tools/sph2pipe_v2.5:${PATH}"
 ENV LC_ALL=C
 
 # Default working directory for user projects
