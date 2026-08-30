@@ -67,8 +67,8 @@ RUN cd /opt/kaldi/tools && \
     ./configure --shared --mathlib=OPENBLAS --openblas-root=/opt/kaldi/tools/OpenBLAS/install && \
     make depend -j ${TOOLS_JOBS} && \
     make -j ${NUM_JOBS} && \
-    find /opt/kaldi/src -type f -name "*.o" -delete && \
-    rm -rf /opt/kaldi/.git
+    find /opt/kaldi -type f \( -name "*.o" -o -name "*.lo" -o -name "*.la" \) -delete && \
+    rm -rf /opt/kaldi/.git /opt/kaldi/tools/openfst-*/src/.libs
 
 # Configure Comprehensive Environment Variables & PATH for all Kaldi binary toolchains
 ENV KALDI_ROOT=/opt/kaldi
